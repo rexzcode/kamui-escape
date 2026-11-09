@@ -153,7 +153,46 @@
 @property (nonatomic, assign) BOOL showHidden;
 @property (nonatomic, assign) BOOL accessDenied;
 @property (nonatomic, copy)   NSString *accessError;
+@property (nonatomic, assign) BOOL isMountsRoot;
 @end
+
+// Known places to try. BQEscape can't grant an extension for "/", so the root
+// screen shows this list of candidate mounts instead. Each one is a real path
+// the user navigates into; the escape (if any) is opened on arrival.
+static NSArray<NSDictionary *> *BQMounts(void) {
+    NSMutableArray *m = [NSMutableArray new];
+    NSString *docs = BQDocuments();
+    if (docs.length) {
+        [m addObject:@{@"title": @"App Documents", @"path": docs, @"icon": @"doc.text"}];
+        NSString *lib = [[docs stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"Library"];
+        [m addObject:@{@"title": @"App Library", @"path": lib, @"icon": @"books.vertical"}];
+        NSString *container = [docs stringByDeletingLastPathComponent];
+        [m addObject:@{@"title": @"App container", @"path": container, @"icon": @"shippingbox"}];
+    }
+    NSString *groupRoot = BQGroupRoot();
+    if (groupRoot.length) {
+        [m addObject:@{@"title": @"App group", @"path": groupRoot, @"icon": @"person.3"}];
+    }
+    [m addObject:@{@"title": @"MobileGestalt caches",
+                   @"path": @"/private/var/containers/Shared/SystemGroup/systemgroup.com.apple.mobilegestaltcache/Library/Caches",
+                   @"icon": @"cpu"}];
+    [m addObject:@{@"title": @"Data containers",
+                   @"path": @"/private/var/mobile/Containers/Data/Application",
+                   @"icon": @"square.stack.3d.up"}];
+    [m addObject:@{@"title": @"Shared app groups",
+                   @"path": @"/private/var/mobile/Containers/Shared/AppGroup",
+                   @"icon": @"person.3.sequence"}];
+    [m addObject:@{@"title": @"System groups",
+                   @"path": @"/private/var/containers/Shared/SystemGroup",
+                   @"icon": @"gearshape.2"}];
+    [m addObject:@{@"title": @"PluginKit plugins",
+                   @"path": @"/private/var/mobile/Containers/Data/PluginKitPlugin",
+                   @"icon": @"puzzlepiece.extension"}];
+    [m addObject:@{@"title": @"App bundles",
+                   @"path": @"/private/var/containers/Bundle/Application",
+                   @"icon": @"app.gift"}];
+    return m;
+}
 
 @implementation FileBrowserVC
 
@@ -161,6 +200,7 @@
     self = [super initWithStyle:UITableViewStylePlain];
     if (self) {
         _path = path.length ? [path copy] : @"/";
+        _isMountsRoot = [_path isEqualToString:@"/"];
         _showHidden = [[NSUserDefaults standardUserDefaults] boolForKey:@"BQShowHidden"];
     }
     return self;
@@ -168,7 +208,7 @@
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.title = [self.path isEqualToString:@"/"] ? @"/" : self.path.lastPathComponent;
+    self.title = self.isMountsRoot ? @"Mounts" : self.path.lastPathComponent;
     self.tableView.rowHeight = 56;
     self.tableView.allowsSelectionDuringEditing = YES;
 
@@ -195,9 +235,18 @@
 
 - (void)reload {
     [self.lease close];
-    self.lease = [BQLease leaseForPath:self.path];
     self.accessDenied = NO;
     self.accessError = nil;
+
+    if (self.isMountsRoot) {
+        self.lease = nil;
+        self.entries = BQMounts();
+        [self.tableView reloadData];
+        [self.refreshControl endRefreshing];
+        return;
+    }
+
+    self.lease = [BQLease leaseForPath:self.path];
 
     if (!self.lease.linkPath) {
         self.entries = @[];
@@ -273,6 +322,17 @@
         return cell;
     }
 
+    if (self.isMountsRoot) {
+        NSDictionary *m = self.entries[ip.row];
+        cell.textLabel.text = m[@"title"];
+        cell.detailTextLabel.text = m[@"path"];
+        cell.detailTextLabel.numberOfLines = 1;
+        cell.imageView.image = [UIImage systemImageNamed:m[@"icon"] ?: @"folder"];
+        cell.selectionStyle = UITableViewCellSelectionStyleDefault;
+        cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+        return cell;
+    }
+
     NSDictionary *d = self.entries[ip.row];
     BOOL isDir = [d[@"isDir"] boolValue];
     BOOL isLink = [d[@"isLink"] boolValue];
@@ -298,6 +358,12 @@
 - (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)ip {
     [tv deselectRowAtIndexPath:ip animated:YES];
     if (self.accessDenied) return;
+    if (self.isMountsRoot) {
+        NSDictionary *m = self.entries[ip.row];
+        FileBrowserVC *next = [[FileBrowserVC alloc] initWithPath:m[@"path"]];
+        [self.navigationController pushViewController:next animated:YES];
+        return;
+    }
     NSDictionary *d = self.entries[ip.row];
     NSString *name = d[@"name"];
     NSString *realChild = [self.path stringByAppendingPathComponent:name];
@@ -320,7 +386,7 @@
 
 - (UISwipeActionsConfiguration *)tableView:(UITableView *)tv
     trailingSwipeActionsConfigurationForRowAtIndexPath:(NSIndexPath *)ip {
-    if (self.accessDenied) return nil;
+    if (self.accessDenied || self.isMountsRoot) return nil;
     NSDictionary *d = self.entries[ip.row];
     NSString *name = d[@"name"];
     __weak typeof(self) weakSelf = self;
@@ -426,6 +492,10 @@
 }
 
 - (void)promptNewFolder {
+    if (self.isMountsRoot || !self.lease.linkPath) {
+        BQAlert(self, @"New folder", @"Open a mount first.");
+        return;
+    }
     UIAlertController *ac = [UIAlertController alertControllerWithTitle:@"New folder"
                                                                 message:self.path
                                                          preferredStyle:UIAlertControllerStyleAlert];
