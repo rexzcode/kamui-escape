@@ -31,6 +31,7 @@ clang \
     "$ROOT/src/main.m" \
     "$ROOT/src/AppDelegate.m" \
     "$ROOT/src/FileBrowserVC.m" \
+    "$ROOT/src/AppsListVC.m" \
     "$ROOT/src/BQUI.m" \
     "$ROOT/src/BQCore.m" \
     -o "$APP/$APP_NAME"

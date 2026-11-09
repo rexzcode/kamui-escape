@@ -1,4 +1,5 @@
 #import "FileBrowserVC.h"
+#import "AppsListVC.h"
 #import "BQCore.h"
 #import "BQUI.h"
 #import <sys/stat.h>
@@ -173,12 +174,12 @@ static NSArray<NSDictionary *> *BQMounts(void) {
     if (groupRoot.length) {
         [m addObject:@{@"title": @"App group", @"path": groupRoot, @"icon": @"person.3"}];
     }
+    [m addObject:@{@"title": @"Installed apps",
+                   @"kind": @"apps",
+                   @"icon": @"app.badge"}];
     [m addObject:@{@"title": @"MobileGestalt caches",
                    @"path": @"/private/var/containers/Shared/SystemGroup/systemgroup.com.apple.mobilegestaltcache/Library/Caches",
                    @"icon": @"cpu"}];
-    [m addObject:@{@"title": @"Data containers",
-                   @"path": @"/private/var/mobile/Containers/Data/Application",
-                   @"icon": @"square.stack.3d.up"}];
     [m addObject:@{@"title": @"Shared app groups",
                    @"path": @"/private/var/mobile/Containers/Shared/AppGroup",
                    @"icon": @"person.3.sequence"}];
@@ -325,7 +326,7 @@ static NSArray<NSDictionary *> *BQMounts(void) {
     if (self.isMountsRoot) {
         NSDictionary *m = self.entries[ip.row];
         cell.textLabel.text = m[@"title"];
-        cell.detailTextLabel.text = m[@"path"];
+        cell.detailTextLabel.text = m[@"path"] ?: @"browse apps by name";
         cell.detailTextLabel.numberOfLines = 1;
         cell.imageView.image = [UIImage systemImageNamed:m[@"icon"] ?: @"folder"];
         cell.selectionStyle = UITableViewCellSelectionStyleDefault;
@@ -360,6 +361,11 @@ static NSArray<NSDictionary *> *BQMounts(void) {
     if (self.accessDenied) return;
     if (self.isMountsRoot) {
         NSDictionary *m = self.entries[ip.row];
+        if ([m[@"kind"] isEqualToString:@"apps"]) {
+            AppsListVC *apps = [AppsListVC new];
+            [self.navigationController pushViewController:apps animated:YES];
+            return;
+        }
         FileBrowserVC *next = [[FileBrowserVC alloc] initWithPath:m[@"path"]];
         [self.navigationController pushViewController:next animated:YES];
         return;
