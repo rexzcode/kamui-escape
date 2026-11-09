@@ -30,13 +30,7 @@ clang \
     -L"$SDK/usr/lib" -lz \
     "$ROOT/src/main.m" \
     "$ROOT/src/AppDelegate.m" \
-    "$ROOT/src/RootTabBarController.m" \
-    "$ROOT/src/GestaltVC.m" \
-    "$ROOT/src/CacheExtraEditVC.m" \
-    "$ROOT/src/PosterBoardVC.m" \
-    "$ROOT/src/TendiesExploreVC.m" \
-    "$ROOT/src/SettingsVC.m" \
-    "$ROOT/src/LogVC.m" \
+    "$ROOT/src/FileBrowserVC.m" \
     "$ROOT/src/BQUI.m" \
     "$ROOT/src/BQCore.m" \
     -o "$APP/$APP_NAME"

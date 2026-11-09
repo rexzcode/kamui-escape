@@ -1,14 +1,17 @@
 #import "AppDelegate.h"
 #import "BQCore.h"
 #import "BQUI.h"
-#import "RootTabBarController.h"
+#import "FileBrowserVC.h"
 
 @implementation AppDelegate
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     BQCoreInit();
     self.window = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
-    self.window.rootViewController = [[RootTabBarController alloc] init];
+    FileBrowserVC *root = [[FileBrowserVC alloc] initWithPath:@"/"];
+    UINavigationController *nav = [[UINavigationController alloc] initWithRootViewController:root];
+    nav.navigationBar.prefersLargeTitles = YES;
+    self.window.rootViewController = nav;
     [self.window makeKeyAndVisible];
 
     if (!BQGroupID().length) {
