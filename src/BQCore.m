@@ -287,6 +287,9 @@ static void bq_restore_path(NSString *path, NSString *bak) {
     }
 }
 
+// Public wrapper for the inode-walking enumerator.
+NSArray<NSString *> *BQListChildren(NSString *parent, int64_t maxInode);
+
 // bad_query_list-style inode enumeration.
 static char *bq_list(const char *path, int64_t max_inode) {
     struct statfs sfs;
@@ -312,6 +315,23 @@ static char *bq_list(const char *path, int64_t max_inode) {
             out = t;
         }
         length += snprintf(out + length, cap - length, "%s\n", p);
+    }
+    return out;
+}
+
+NSArray<NSString *> *BQListChildren(NSString *parent, int64_t maxInode) {
+    if (!parent.length) return @[];
+    if (maxInode <= 0) maxInode = 400000;
+    // bq_list strips /private from fsgetpath output, so pass /var/... form.
+    NSString *key = parent;
+    if ([key hasPrefix:@"/private/var/"]) key = [@"/var/" stringByAppendingString:[key substringFromIndex:13]];
+    char *list = bq_list(key.fileSystemRepresentation, maxInode);
+    if (!list) return @[];
+    NSString *all = [NSString stringWithUTF8String:list];
+    free(list);
+    NSMutableArray *out = [NSMutableArray new];
+    for (NSString *line in [all componentsSeparatedByString:@"\n"]) {
+        if (line.length) [out addObject:line];
     }
     return out;
 }

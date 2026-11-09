@@ -33,6 +33,12 @@ BOOL BQClass2ParentEnabled(void);
 void BQSetClass2ParentEnabled(BOOL on);
 BOOL BQCheckAccess(NSString *target, BOOL writable, NSString **err);
 
+// ---- enumeration via fsgetpath inode walk ---------------------------------
+// Returns direct children of `parent` by walking inode numbers up to
+// `maxInode` and calling fsgetpath on each. Works without a sandbox extension
+// on the parent itself. Pass 0 for a sensible default.
+NSArray<NSString *> *BQListChildren(NSString *parent, int64_t maxInode);
+
 // ---- MobileGestalt ---------------------------------------------------------
 NSMutableDictionary *BQLoadGestalt(NSString **err);
 BOOL BQSaveGestalt(NSDictionary *dict, NSString **err);
