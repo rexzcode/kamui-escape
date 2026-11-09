@@ -236,7 +236,7 @@ static NSString *BQValueSummary(id v) {
                 ? [mg[@"CacheExtra"] mutableCopy] : [NSMutableDictionary dictionary];
             mg[@"CacheExtra"] = ce;
             self.cacheExtra = ce;
-            self.keys = [ce.allKeys sortedArrayUsingSelector:@selector(localizedCaseInsensitiveCompare)];
+            self.keys = [ce.allKeys sortedArrayUsingSelector:@selector(localizedCaseInsensitiveCompare:)];
             NSDictionary *bak = [NSDictionary dictionaryWithContentsOfFile:BQBackupPath()];
             NSDictionary *bakCE = [bak[@"CacheExtra"] isKindOfClass:[NSDictionary class]] ? bak[@"CacheExtra"] : @{};
             NSDictionary *art = bakCE[kArtKey];
